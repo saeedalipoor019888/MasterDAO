@@ -3,15 +3,6 @@ const { ethers } = require("hardhat");
 
 /*
 
-    const DeleteTXOwner = await GOVTokenContract.delegate(owner.address);
-    await DeleteTXOwner.wait(1);
-    console.log(
-      "OwnerPower : ",
-      await GOVTokenContract.numCheckpoints(owner.address)
-    );
-
-    with this code we delegate to user and user can vote ! but if we delegte before and after create proposal , results are different.
-    test it and move this code before and after and see results.
 */
 
 describe("DAO", function () {
