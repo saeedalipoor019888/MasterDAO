@@ -10,6 +10,7 @@ contract GOVToken is ERC20Votes {
     Counters.Counter public ERC20TokenID;
 
     struct ERC20Tokens {
+        address creator;
         address ERC20TokenAddress;
         uint256 ERC20Rate;
         uint256 ERC20TokenID;
@@ -17,22 +18,6 @@ contract GOVToken is ERC20Votes {
     mapping(uint256 => ERC20Tokens) public IDToERC20Tokens;
 
     constructor() ERC20("GOVToken", "GOVToken") ERC20Permit("GOVToken") {}
-
-    function registerNewERC20(address _ERC20Token, uint256 _ERC20Rate)
-        external
-        payable
-    {
-        require(msg.value == 0.01 ether);
-        ERC20TokenID.increment();
-
-        ERC20Tokens memory _newERC20Tokens = ERC20Tokens(
-            _ERC20Token,
-            _ERC20Rate,
-            ERC20TokenID.current()
-        );
-
-        IDToERC20Tokens[ERC20TokenID.current()] = _newERC20Tokens;
-    }
 
     function _afterTokenTransfer(
         address from,
@@ -51,6 +36,25 @@ contract GOVToken is ERC20Votes {
         override(ERC20Votes)
     {
         super._burn(account, amount);
+    }
+
+    /// /////////////////////////////////////////////////////////////////////////////// My Functions
+
+    function registerNewERC20(address _ERC20Token, uint256 _ERC20Rate)
+        external
+        payable
+    {
+        require(msg.value == 0.01 ether);
+        ERC20TokenID.increment();
+
+        ERC20Tokens memory _newERC20Tokens = ERC20Tokens(
+            msg.sender,
+            _ERC20Token,
+            _ERC20Rate,
+            ERC20TokenID.current()
+        );
+
+        IDToERC20Tokens[ERC20TokenID.current()] = _newERC20Tokens;
     }
 
     function mintPower(uint256 _ERC20TokenID) external returns (bool) {
@@ -73,7 +77,7 @@ contract GOVToken is ERC20Votes {
         return true;
     }
 
-    ///
+    /// /////////////////////////////////////////////////////////////////////////////// Getter Functions
     function getERC20TokenDetails(address _ERC20Token)
         external
         view

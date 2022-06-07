@@ -26,40 +26,110 @@ describe("DAO", function () {
       ethers.utils.parseEther("100")
     );
 
-    /// /////////////////////////////////////////////////////////////////////////////// Test Mint Power Before
-    // here we see user has power to vote for proposal or no ! 0 means no and 1 means yes
-    console.log(
-      "User Power Before Mint : ",
-      await GOVTokenContract.numCheckpoints(addr1.address)
+    /// /////////////////////////////////////////////////////////////////////////////// DEPLOY MAIN CONTRACT
+    const Age = await ethers.getContractFactory("Age");
+    const AgeContract = await Age.deploy();
+    await AgeContract.deployed();
+    console.log("AgeContract deployed to:", AgeContract.address);
+
+    /// /////////////////////////////////////////////////////////////////////////////// DEPLOY MAIN TIMELOCK TOKEN
+    const TimeLock = await ethers.getContractFactory("TimeLock");
+    const TimeLockContract = await TimeLock.deploy(3600, [], []);
+    await TimeLockContract.deployed();
+    console.log("TimeLockContract deployed to:", TimeLockContract.address);
+
+    /// /////////////////////////////////////////////////////////////////////////////// DEPLOY MAIN GOV CONTRACT
+    const GovernanceContract = await ethers.getContractFactory(
+      "GovernanceContract"
     );
-
-    /// /////////////////////////////////////////////////////////////////////////////// add ERC20 TOken to GOV Token
-    // here we add our test erc20 token to GOV token contract , address / rate and 0.01 ether as fee
-    // rate means for every 30 erc20 tokens we mint 1 GOV token to msg.sender
-    await GOVTokenContract.registerNewERC20(TestERC20Contract.address, 30, {
-      value: ethers.utils.parseEther("0.01"),
-    });
-
-    /// /////////////////////////////////////////////////////////////////////////////// Mint power to addr1
-    // address 1 transfer 30 erc20 token to GOV contract and GOV contract after
-    // validation , mint 1 GOV token to msg.sender and add 1 vote power to msg.sedner
-    const approveTX = await TestERC20Contract.connect(addr1).approve(
+    const GovernanceContractC = await GovernanceContract.deploy(
       GOVTokenContract.address,
-      ethers.utils.parseEther("30")
+      TimeLockContract.address
     );
-    await approveTX.wait(1);
-    const mintTX = await GOVTokenContract.connect(addr1).mintPower(1);
-    await mintTX.wait(1);
-
-    /// /////////////////////////////////////////////////////////////////////////////// Test Mint Power After
+    await GovernanceContractC.deployed();
     console.log(
-      "User Power After Mint : ",
-      await GOVTokenContract.numCheckpoints(addr1.address)
+      "GovernanceContractC deployed to:",
+      GovernanceContractC.address
     );
 
-    /// /////////////////////////////////////////////////////////////////////////////// Get token details
-    console.log(
-      (await GOVTokenContract.connect(addr1).getUserPower()).toString()
+    /// /////////////////////////////////////////////////////////////////////////////// DEPLOY MASTER GOV CONTRACT
+    const GOVMaster = await ethers.getContractFactory("GOVMaster");
+    const GOVMasterContract = await GOVMaster.deploy();
+    await GOVMasterContract.deployed();
+    console.log("GOVMasterContract deployed to:", GOVMasterContract.address);
+
+    /// /////////////////////////////////////////////////////////////////////////////// TRANSFER ROLES
+    const PROPOSER_ROLE = await TimeLockContract.PROPOSER_ROLE();
+    const EXECUTOR_ROLE = await TimeLockContract.EXECUTOR_ROLE();
+    const TIMELOCK_ADMIN_ROLE = await TimeLockContract.TIMELOCK_ADMIN_ROLE();
+
+    //
+    const PROPOSER_ROLETX = await TimeLockContract.grantRole(
+      PROPOSER_ROLE,
+      GovernanceContractC.address
     );
+    await PROPOSER_ROLETX.wait(1);
+
+    //
+    const EXECUTOR_ROLETX = await TimeLockContract.grantRole(
+      EXECUTOR_ROLE,
+      "0x0000000000000000000000000000000000000000"
+    );
+    await EXECUTOR_ROLETX.wait(1);
+
+    //
+    const TIMELOCK_ADMIN_ROLETX = await TimeLockContract.grantRole(
+      TIMELOCK_ADMIN_ROLE,
+      owner.address
+    );
+    await TIMELOCK_ADMIN_ROLETX.wait(1);
+
+    /// /////////////////////////////////////////////////////////////////////////////// Set Address
+
+    const setAddressTX = await GOVMasterContract.setAddress(
+      GovernanceContractC.address,
+      TimeLockContract.address
+    );
+
+    await setAddressTX.wait(1);
+
+    /// /////////////////////////////////////////////////////////////////////////////// create new gov contract
+
+    const createNewGOVTX = await GOVMasterContract.createNewProposalContract(
+      TestERC20Contract.address
+    );
+    await createNewGOVTX.wait(1);
+
+    console.log(
+      "New DAO Contract created : ",
+      await GOVMasterContract.getDAOContractAddressOfERC20Token(
+        TestERC20Contract.address
+      )
+    );
+
+    /// /////////////////////////////////////////////////////////////////////////////// create new proposal
+
+    const encodeFunctionCall = AgeContract.interface.encodeFunctionData(
+      "setAge",
+      [50]
+    );
+    const proposalDesc = "change age value from 0 to 50";
+
+    const proposTX = await GOVMasterContract.createProposal(
+      TestERC20Contract.address,
+      [AgeContract.address],
+      [0],
+      [encodeFunctionCall],
+      proposalDesc
+    );
+    await proposTX.wait(1);
+
+    /// /////////////////////////////////////////////////////////////////////////////// check new proposal state #1
+
+    const proposalDetails =
+      await GOVMasterContract.getAllProposalsOfERC20TokenAddress(
+        TestERC20Contract.address
+      );
+    console.log(proposalDetails.toString());
   });
 });
