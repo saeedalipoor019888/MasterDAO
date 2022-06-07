@@ -1,19 +1,20 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import "./Utils/GovernanceContract.sol";
 import "./Utils/TimeLock.sol";
 import "./GOVToken.sol";
-
-import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract GOVMaster {
     using Counters for Counters.Counter;
 
     Counters.Counter public ProposalIDTracker;
 
-    address public GOVTokenContract;
-    address public TimeLockContract;
+    address GOVTokenContract;
+    address TimeLockContract;
 
     struct ProposalData {
         address creatorAddress;
@@ -21,6 +22,7 @@ contract GOVMaster {
         uint256 proposalIDHash;
         uint256 proposalID;
         address proposalDAOContract;
+        uint256 voteRate;
     }
 
     mapping(address => address) ERC20TokenProposalsContarcts;
@@ -46,10 +48,11 @@ contract GOVMaster {
         );
     }
 
-    /// //////////////////////////////////////////////////////////////////////// Create Proposal  Section
+    /// //////////////////////////////////////////////////////////////////////// Create Proposal Section
 
     function createProposal(
         address _ERC20TokenAddress,
+        uint256 _voteRate,
         address[] memory targets,
         uint256[] memory values,
         bytes[] memory calldatas,
@@ -82,6 +85,7 @@ contract GOVMaster {
         .proposalID = ProposalIDTracker.current();
         ProposalDataFromID[ProposalIDTracker.current()]
         .proposalDAOContract = _proposalContractAddress;
+        ProposalDataFromID[ProposalIDTracker.current()].voteRate = _voteRate;
     }
 
     /// //////////////////////////////////////////////////////////////////////// Proposal Contract Getter Section
@@ -178,4 +182,28 @@ contract GOVMaster {
     }
 
     /// //////////////////////////////////////////////////////////////////////// GOV Token Contract Section
+
+    function mintPowerToUser(uint256 _proposalID) external {
+        address _userAddress = msg.sender;
+        ProposalData memory _ProposalData = ProposalDataFromID[_proposalID];
+
+        require(
+            IERC20(_ProposalData.ERC20TokenAddress).balanceOf(msg.sender) >=
+                _ProposalData.voteRate,
+            "influence ERC20 Token Balance"
+        );
+
+        IERC20(_ProposalData.ERC20TokenAddress).transferFrom(
+            _userAddress,
+            address(this),
+            _ProposalData.voteRate
+        );
+
+        require(GOVToken(GOVTokenContract).mintPower(_userAddress, 1));
+        GOVToken(GOVTokenContract).delegate(_userAddress);
+    }
+
+    function getUserPowerToVote() external view returns (uint256) {
+        return GOVToken(GOVTokenContract).numCheckpoints(msg.sender);
+    }
 }

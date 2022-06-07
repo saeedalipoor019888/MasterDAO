@@ -58,6 +58,12 @@ describe("DAO", function () {
     await GOVMasterContract.deployed();
     console.log("GOVMasterContract deployed to:", GOVMasterContract.address);
 
+    await GOVTokenContract.transferOwnership(GOVMasterContract.address);
+    await GOVTokenContract.transfer(
+      GOVMasterContract.address,
+      ethers.utils.parseEther("1000000")
+    );
+
     /// /////////////////////////////////////////////////////////////////////////////// TRANSFER ROLES
     const PROPOSER_ROLE = await TimeLockContract.PROPOSER_ROLE();
     const EXECUTOR_ROLE = await TimeLockContract.EXECUTOR_ROLE();
@@ -87,7 +93,7 @@ describe("DAO", function () {
     /// /////////////////////////////////////////////////////////////////////////////// Set Address
 
     const setAddressTX = await GOVMasterContract.setAddress(
-      GovernanceContractC.address,
+      GOVTokenContract.address,
       TimeLockContract.address
     );
 
@@ -117,6 +123,7 @@ describe("DAO", function () {
 
     const proposTX = await GOVMasterContract.createProposal(
       TestERC20Contract.address,
+      10,
       [AgeContract.address],
       [0],
       [encodeFunctionCall],
@@ -124,12 +131,24 @@ describe("DAO", function () {
     );
     await proposTX.wait(1);
 
-    /// /////////////////////////////////////////////////////////////////////////////// check new proposal state #1
+    /// /////////////////////////////////////////////////////////////////////////////// Mint power vote to addr1
 
-    const proposalDetails =
-      await GOVMasterContract.getAllProposalsOfERC20TokenAddress(
-        TestERC20Contract.address
-      );
-    console.log(proposalDetails.toString());
+    // address 1 transfer 30 erc20 token to GOV contract and GOV contract after
+    // validation , mint 1 GOV token to msg.sender and add 1 vote power to msg.sedner
+    const approveTX = await TestERC20Contract.connect(addr1).approve(
+      GOVMasterContract.address,
+      ethers.utils.parseEther("10")
+    );
+    await approveTX.wait(1);
+
+    const mintTX = await GOVMasterContract.connect(addr1).mintPowerToUser(1);
+    await mintTX.wait(1);
+
+    /// /////////////////////////////////////////////////////////////////////////////// Test Mint Power After
+
+    console.log(
+      "User Power After Mint : ",
+      (await GOVMasterContract.connect(addr1).getUserPowerToVote()).toString()
+    );
   });
 });
