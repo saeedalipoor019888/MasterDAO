@@ -20,7 +20,7 @@ contract GovernanceContract is
         Governor("GovernanceContract")
         GovernorSettings(
             1, /* 1 block */
-            100, /* 1 week */
+            50, /* 1 week */
             0
         )
         GovernorVotes(_token)

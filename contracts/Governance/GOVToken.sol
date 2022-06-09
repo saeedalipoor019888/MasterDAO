@@ -2,16 +2,12 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-
-contract GOVToken is ERC20Votes, Ownable {
-    uint256 _fixedSupply = 1000000000000000000000000;
+contract GOVToken is ERC20Votes {
+    uint256 fixedSupply = 1000000000000000000000;
 
     constructor() ERC20("GOVToken", "GOVToken") ERC20Permit("GOVToken") {
-        _mint(msg.sender, _fixedSupply);
+        _mint(msg.sender, fixedSupply);
     }
 
     function _afterTokenTransfer(
@@ -31,16 +27,5 @@ contract GOVToken is ERC20Votes, Ownable {
         override(ERC20Votes)
     {
         super._burn(account, amount);
-    }
-
-    /// /////////////////////////////////////////////////////////////////////////////// My Functions
-
-    function mintPower(address _userAddress, uint256 _toMint)
-        external
-        onlyOwner
-        returns (bool)
-    {
-        _mint(_userAddress, _toMint);
-        return true;
     }
 }
