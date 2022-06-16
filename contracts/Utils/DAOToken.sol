@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract DAOToken is ERC20Votes, Ownable {
     constructor(uint256 _amountToMint)
-        ERC20("GOVToken", "GOVToken")
-        ERC20Permit("GOVToken")
+        ERC20("DAOToken", "DAOToken")
+        ERC20Permit("DAOToken")
     {
         _mint(msg.sender, _amountToMint);
     }
@@ -32,13 +32,7 @@ contract DAOToken is ERC20Votes, Ownable {
     }
 
     function addPower(address _userAddress) public onlyOwner returns (bool) {
-        transferFrom(_userAddress, owner(), 1000000000000000000);
         _delegate(_userAddress, _userAddress);
-        return true;
-    }
-
-    function removePower(address _userAddress) public onlyOwner returns (bool) {
-        _delegate(_userAddress, address(0));
         return true;
     }
 }

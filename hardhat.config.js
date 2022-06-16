@@ -34,11 +34,7 @@ module.exports = {
   networks: {
     hardhat: {
       chainId: 1337,
-    },
-    localDev: {
-      url: "http://127.0.0.1:8545",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+      gas: "auto",
     },
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
@@ -47,10 +43,10 @@ module.exports = {
     },
   },
   gasReporter: {
-    enabled: process.env.REPORT_GAS !== undefined,
+    enabled: false,
     currency: "USD",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: "E4A9E594QRAUPNC3VAITZIMIPU6UUD79NQ",
   },
 };
