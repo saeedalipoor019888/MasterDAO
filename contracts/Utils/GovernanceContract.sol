@@ -120,4 +120,20 @@ contract GovernanceContract is
     {
         return super.supportsInterface(interfaceId);
     }
+
+    function VoteToProposal(
+        address _userAddress,
+        uint256 proposalId,
+        uint8 support,
+        string calldata reason
+    ) public returns (uint256) {
+        return
+            _castVote(
+                proposalId,
+                _userAddress,
+                support,
+                reason,
+                _defaultParams()
+            );
+    }
 }

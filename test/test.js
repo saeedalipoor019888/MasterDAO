@@ -3,11 +3,11 @@ const { ethers } = require("hardhat");
 
 /*
 
-    const DeleteTXOwner = await GOVTokenContract.delegate(owner.address);
+    const DeleteTXOwner = await DAOTokenContract.delegate(owner.address);
     await DeleteTXOwner.wait(1);
     console.log(
       "OwnerPower : ",
-      await GOVTokenContract.numCheckpoints(owner.address)
+      await DAOTokenContract.numCheckpoints(owner.address)
     );
 
     with this code we delegate to user and user can vote ! but if we delegte before and after create proposal , results are different.
@@ -15,6 +15,11 @@ const { ethers } = require("hardhat");
 */
 
 describe("DAO", function () {
+  let encodeFunctionCall1;
+  let proposalDesc;
+  let TX;
+  let proposalID;
+
   it("Start", async function () {
     const [owner, addr1] = await ethers.getSigners();
 
@@ -22,200 +27,147 @@ describe("DAO", function () {
     const Age = await ethers.getContractFactory("Age");
     const AgeContract = await Age.deploy();
     await AgeContract.deployed();
-    console.log("AgeContract deployed to:", AgeContract.address);
+    // console.log("AgeContract deployed to:", AgeContract.address);
 
-    console.log("First value :", (await AgeContract.getAge()).toString());
+    // console.log("First value :", (await AgeContract.getAge()).toString());
 
     /// /////////////////////////////////////////////////////////////////////////////// DEPLOY MAIN GOV TOKEN
-    const GOVToken = await ethers.getContractFactory("GOVToken");
-    const GOVTokenContract = await GOVToken.deploy();
-    await GOVTokenContract.deployed();
-    console.log("GOVTokenContract deployed to:", GOVTokenContract.address);
-
-    const DeleteTXOwner = await GOVTokenContract.delegate(addr1.address);
-    await DeleteTXOwner.wait(1);
-    console.log(
-      "OwnerPower : ",
-      await GOVTokenContract.numCheckpoints(addr1.address)
+    const DAOToken = await ethers.getContractFactory("DAOToken");
+    const DAOTokenContract = await DAOToken.deploy(
+      ethers.utils.parseEther("1000")
     );
+    await DAOTokenContract.deployed();
+
+    await DAOTokenContract.transfer(
+      addr1.address,
+      ethers.utils.parseEther("1000")
+    );
+
+    /// /////////////////////////////////////////////////////////////////////////////// DEPLOY MAIN GOV TOKEN
+    const PersisERC20 = await ethers.getContractFactory("Persis");
+    const PersisERC20Contract = await PersisERC20.deploy();
+    await PersisERC20Contract.deployed();
+    // console.log("PersisERC20Contract deployed to:", PersisERC20Contract.address);
+
+    // await PersisERC20Contract.transfer(
+    //   addr1.address,
+    //   ethers.utils.parseEther("1000")
+    // );
 
     /// /////////////////////////////////////////////////////////////////////////////// DEPLOY MAIN TIMELOCK TOKEN
     const TimeLock = await ethers.getContractFactory("TimeLock");
     const TimeLockContract = await TimeLock.deploy(3600, [], []);
     await TimeLockContract.deployed();
-    console.log("TimeLockContract deployed to:", TimeLockContract.address);
+    // console.log("TimeLockContract deployed to:", TimeLockContract.address);
 
     /// /////////////////////////////////////////////////////////////////////////////// DEPLOY MAIN GOV CONTRACT
     const GovernanceContract = await ethers.getContractFactory(
       "GovernanceContract"
     );
     const GovernanceContractC = await GovernanceContract.deploy(
-      GOVTokenContract.address,
+      DAOTokenContract.address,
       TimeLockContract.address
     );
     await GovernanceContractC.deployed();
-    console.log(
-      "GovernanceContractC deployed to:",
-      GovernanceContractC.address
-    );
+    // console.log(
+    //   "GovernanceContractC deployed to:",
+    //   GovernanceContractC.address
+    // );
 
     /// /////////////////////////////////////////////////////////////////////////////// DEPLOY MAIN GOV CONTRACT
     const MasterDAO = await ethers.getContractFactory("MasterDAO");
     const MasterDAOContract = await MasterDAO.deploy();
     await MasterDAOContract.deployed();
-    console.log("MasterDAOContract deployed to:", MasterDAOContract.address);
+    // console.log("MasterDAOContract deployed to:", MasterDAOContract.address);
 
     await MasterDAOContract.setAddress(
-      GOVTokenContract.address,
+      DAOTokenContract.address,
       TimeLockContract.address
     );
 
-    /// /////////////////////////////////////////////////////////////////////////////// TRANSFER ROLES
-    const PROPOSER_ROLE = await TimeLockContract.PROPOSER_ROLE();
-    const EXECUTOR_ROLE = await TimeLockContract.EXECUTOR_ROLE();
-    const TIMELOCK_ADMIN_ROLE = await TimeLockContract.TIMELOCK_ADMIN_ROLE();
-
-    //
-    const PROPOSER_ROLETX = await TimeLockContract.grantRole(
-      PROPOSER_ROLE,
-      GovernanceContractC.address
-    );
-    await PROPOSER_ROLETX.wait(1);
-
-    //
-    const EXECUTOR_ROLETX = await TimeLockContract.grantRole(
-      EXECUTOR_ROLE,
-      "0x0000000000000000000000000000000000000000"
-    );
-    await EXECUTOR_ROLETX.wait(1);
-
-    //
-    const TIMELOCK_ADMIN_ROLETX = await TimeLockContract.grantRole(
-      TIMELOCK_ADMIN_ROLE,
-      owner.address
-    );
-    await TIMELOCK_ADMIN_ROLETX.wait(1);
-
-    /// /////////////////////////////////////////////////////////////////////////////// TRANSFER MAIN CONTRACT OWNERSHIP TO TIMELOCK
-    const transferOwnershipTX = await AgeContract.transferOwnership(
-      TimeLockContract.address
-    );
-    await transferOwnershipTX.wait();
+    TX = await DAOTokenContract.transferOwnership(MasterDAOContract.address);
+    await TX.wait(1);
 
     /// /////////////////////////////////////////////////////////////////////////////// CREATE NEW DAO CONTRACT
-    await MasterDAOContract.createNewDAOContract();
-    await MasterDAOContract.createNewDAOContract();
 
-    /// /////////////////////////////////////////////////////////////////////////////// CREATE PROPOSE BY GOV CONTRACT
+    await MasterDAOContract.createNewDAOContract(PersisERC20Contract.address);
 
-    const encodeFunctionCall1 = AgeContract.interface.encodeFunctionData(
-      "setAge",
-      [50]
+    console.log(
+      "User native token balance before delegate to make vote : ",
+      (await DAOTokenContract.balanceOf(addr1.address)).toString()
     );
 
-    const proposalDesc1 = "change age value from 0 to 50";
+    /// /////////////////////////////////////////////////////////////////////////////// DELEGATE
+    TX = await DAOTokenContract.connect(addr1).approve(
+      MasterDAOContract.address,
+      ethers.utils.parseEther("1")
+    );
+    await TX.wait(1);
 
-    const proposTX1 = await MasterDAOContract.createProposal(
-      1,
+    TX = await MasterDAOContract.connect(addr1).addPowerToVote();
+    await TX.wait(1);
+
+    console.log(
+      "every user , has 1 voting weight , user with 10000 native tokens , user with 1 native token , we get 1 native token from user , and add 1 voting weight for user and user can join proposal by this 1 voting weight   : ",
+      (await DAOTokenContract.balanceOf(addr1.address)).toString()
+    );
+    console.log(
+      "user need to send Master DAO contract 1 native token to get 1 voting weight : ",
+      (await DAOTokenContract.getVotes(addr1.address)).toString()
+    );
+    /// /////////////////////////////////////////////////////////////////////////////// CREATE PROPOSE
+
+    encodeFunctionCall1 = AgeContract.interface.encodeFunctionData("setAge", [
+      50,
+    ]);
+
+    proposalDesc = "change age value from 0 to 50";
+
+    TX = await MasterDAOContract.createProposal(
+      PersisERC20Contract.address,
       [AgeContract.address],
       [0],
       [encodeFunctionCall1],
-      proposalDesc1
+      proposalDesc
     );
-    await proposTX1.wait(1);
+    await TX.wait(1);
 
     for (let i = 0; i < 2; i++) {
       ethers.provider.send("evm_mine");
     }
 
-    const proposalID1 = await MasterDAOContract.ProposalIDToProposalHashID(1);
-    console.log(proposalID1.toString());
-
-    const encodeFunctionCall2 = AgeContract.interface.encodeFunctionData(
-      "setAge",
-      [50]
-    );
-
-    const proposalDesc2 = "change age value from 0 to 50";
-
-    const proposTX2 = await MasterDAOContract.createProposal(
-      2,
-      [AgeContract.address],
-      [0],
-      [encodeFunctionCall2],
-      proposalDesc2
-    );
-    await proposTX2.wait(1);
-
-    for (let i = 0; i < 2; i++) {
-      ethers.provider.send("evm_mine");
-    }
-
-    const proposalID2 = await MasterDAOContract.ProposalIDToProposalHashID(2);
-    console.log(proposalID2.toString());
+    proposalID = await MasterDAOContract.ProposalIDToProposalHashID(1);
+    console.log("we created proposal with hashed id ", proposalID.toString());
 
     /// /////////////////////////////////////////////////////////////////////////////// VOTE !
 
-    const voteTXOwner = await MasterDAOContract.connect(addr1).voteForProposal(
-      1,
+    TX = await MasterDAOContract.connect(addr1).voteForProposal(
+      PersisERC20Contract.address,
       1,
       1,
       "I want"
     );
-    await voteTXOwner.wait(1);
-
-    const voteTXOwner2 = await MasterDAOContract.connect(addr1).voteForProposal(
-      2,
-      2,
-      1,
-      "I want"
-    );
-    await voteTXOwner2.wait(1);
+    await TX.wait(1);
 
     for (let i = 0; i < 102; i++) {
       ethers.provider.send("evm_mine");
     }
 
     console.log(
-      "Answer",
-      (await MasterDAOContract.getProposalState(1, 1)).toString()
+      "user voted for out proposal by 1 as support / for , and after proposal deadline , state is Ok :)",
+      (
+        await MasterDAOContract.getProposalState(PersisERC20Contract.address, 1)
+      ).toString()
     );
 
     console.log(
-      "Answer",
-      (await MasterDAOContract.getProposalState(2, 2)).toString()
+      "we will remove voting power of user after vote , delegate vote power to address 0",
+      (await DAOTokenContract.getVotes(addr1.address)).toString()
     );
 
     console.log(
-      "Answer : ",
-      (await GOVTokenContract.getVotes(addr1.address)).toString()
+      "addr1 token balance after vote  : ",
+      (await DAOTokenContract.balanceOf(addr1.address)).toString()
     );
-
-    /// /////////////////////////////////////////////////////////////////////////////// FINISH IT !
-
-    // const DescHash = ethers.utils.keccak256(
-    //   ethers.utils.toUtf8Bytes(proposalDesc)
-    // );
-
-    // const QTX = await GovernanceContractC.queue(
-    //   [AgeContract.address],
-    //   [0],
-    //   [encodeFunctionCall],
-    //   DescHash
-    // );
-    // await QTX.wait(1);
-
-    // await ethers.provider.send("evm_increaseTime", [3601]);
-    // await ethers.provider.send("evm_mine");
-
-    // const EXTX = await GovernanceContractC.execute(
-    //   [AgeContract.address],
-    //   [0],
-    //   [encodeFunctionCall],
-    //   DescHash
-    // );
-    // await EXTX.wait(1);
-
-    // console.log("Final value :", (await AgeContract.getAge()).toString());
   });
 });
