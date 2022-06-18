@@ -16,11 +16,16 @@ contract GovernanceContract is
     GovernorVotesQuorumFraction,
     GovernorTimelockControl
 {
-    constructor(IVotes _token, TimelockController _timelock)
+    constructor(
+        IVotes _token,
+        TimelockController _timelock,
+        uint256 _votingDelay,
+        uint256 _votingPeriod
+    )
         Governor("GovernanceContract")
         GovernorSettings(
-            1, /* 1 block */
-            50, /* 1 week */
+            _votingDelay, /* 1 block */
+            _votingPeriod, /* 1 week */
             0
         )
         GovernorVotes(_token)
