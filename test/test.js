@@ -93,9 +93,9 @@ describe("DAO", () => {
         );
 
       expect(createdGOVContract[0]).to.eql(owner.address);
-      expect(createdGOVContract[1]).to.eql("PERSIS");
-      expect(createdGOVContract[2].toString()).to.eql("1");
-      expect(createdGOVContract[3].length).to.eql(0);
+      expect(createdGOVContract[2]).to.eql("PERSIS");
+      expect(createdGOVContract[3].toString()).to.eql("1");
+      expect(createdGOVContract[4].length).to.eql(0);
     });
 
     it("check details of created new GOV contract by erc20 name", async () => {
@@ -103,9 +103,9 @@ describe("DAO", () => {
         await MasterDAOContract.getDAOContractDetailsByName("PERSIS");
 
       expect(createdGOVContract[0]).to.eql(owner.address);
-      expect(createdGOVContract[1]).to.eql("PERSIS");
-      expect(createdGOVContract[2].toString()).to.eql("1");
-      expect(createdGOVContract[3].length).to.eql(0);
+      expect(createdGOVContract[2]).to.eql("PERSIS");
+      expect(createdGOVContract[3].toString()).to.eql("1");
+      expect(createdGOVContract[4].length).to.eql(0);
     });
 
     it("check details of created new GOV contract by creator/owner", async () => {
@@ -113,9 +113,9 @@ describe("DAO", () => {
         await MasterDAOContract.getDAOContractDetailsByCreator();
 
       expect(createdGOVContract[0]).to.eql(owner.address);
-      expect(createdGOVContract[1]).to.eql("PERSIS");
-      expect(createdGOVContract[2].toString()).to.eql("1");
-      expect(createdGOVContract[3].length).to.eql(0);
+      expect(createdGOVContract[2]).to.eql("PERSIS");
+      expect(createdGOVContract[3].toString()).to.eql("1");
+      expect(createdGOVContract[4].length).to.eql(0);
     });
   });
 
@@ -142,31 +142,35 @@ describe("DAO", () => {
       );
       await TX.wait(1);
     });
-    it("When we get GOC contract details with erc20 address , contract should own one proposal", async () => {
+    it("When we get GOV contract details with erc20 address , contract should own one proposal", async () => {
       const createdGOVContract =
         await MasterDAOContract.getDAOContractDetailsByAddress(
           PersisERC20Contract.address
         );
 
       expect(createdGOVContract[0]).to.eql(owner.address);
-      expect(createdGOVContract[1]).to.eql("PERSIS");
-      expect(createdGOVContract[2].toString()).to.eql("1");
+      expect(createdGOVContract[2]).to.eql("PERSIS");
+      expect(createdGOVContract[3].toString()).to.eql("1");
       // *
-      expect(createdGOVContract[3].length).to.eql(1);
+      expect(createdGOVContract[4].length).to.eql(1);
     });
 
-    // it("lets check new created proposal details for proposal #1", async () => {
-    //   // user has voted for proposal #1 ?
-    //   const userVoted = await MasterDAOContract.userHasVoted(1);
-    //   expect(userVoted).to.eql(false);
+    it("lets check new created proposal details/results for proposal #1", async () => {
+      // user has voted for proposal #1 ?
+      const userVoted = await MasterDAOContract.userHasVoted(1);
+      expect(userVoted).to.eql(false);
 
-    //   // get proposal state
-    //   const proposalState = await MasterDAOContract.getProposalState(1);
-    //   expect(proposalState.toString()).to.eql("0");
+      // get proposal state
+      const proposalState = await MasterDAOContract.getProposalState(1);
+      expect(proposalState.toString()).to.eql("0");
 
-    //   // get proposal result
-    //   const proposalResult = await MasterDAOContract.getProposalResults(1);
-    //   expect(proposalResult[0].toString()).to.eql("0");
-    // });
+      // get proposal result
+      const proposalResult = await MasterDAOContract.getProposalResults(1);
+      expect(proposalResult[0].toString()).to.eql("0");
+    });
+
+    it("it's time to vote for proposal #1", async () => {
+      // user has voted for proposal #1 ?
+    });
   });
 });

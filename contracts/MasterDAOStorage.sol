@@ -69,42 +69,19 @@ contract MasterDAOStorage {
         return _newDAOContractID;
     }
 
-    function createProposal(
-        address _erc20TokenAddress,
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        string memory description
-    ) external returns (bool) {
+    function createProposal(uint256 _GOVContractID, uint256 _hashedProposalID)
+        external
+        returns (bool)
+    {
         ProposalIDTracker.increment();
         uint256 _newProposalID = ProposalIDTracker.current();
 
-        uint256 _allContracts = DAOContractIDTracker.current();
-        DAOContracts memory _DAOContract;
-
-        for (uint256 i = 1; i <= _allContracts; i++) {
-            if (ERC20TokenDAOContarcts[i]._erc20Token == _erc20TokenAddress) {
-                _DAOContract = ERC20TokenDAOContarcts[i];
-            } else {
-                return false;
-            }
-        }
-
-        GovernanceContract _contractInstance = GovernanceContract(
-            payable(_DAOContract._GovernanceContract)
+        ERC20TokenDAOContarcts[_GOVContractID]._proposals.push(
+            _hashedProposalID
         );
 
-        uint256 _proposalID = _contractInstance.propose(
-            targets,
-            values,
-            calldatas,
-            description
-        );
-
-        ERC20TokenDAOContarcts[_DAOContract._id]._proposals.push(_proposalID);
-
-        ProposalIDToProposalHashID[_newProposalID].push(_proposalID);
-        ProposalIDToProposalHashID[_newProposalID].push(_DAOContract._id);
+        ProposalIDToProposalHashID[_newProposalID].push(_hashedProposalID);
+        ProposalIDToProposalHashID[_newProposalID].push(_GOVContractID);
 
         return true;
     }
@@ -160,6 +137,7 @@ contract MasterDAOStorage {
         view
         returns (
             address,
+            address,
             string memory,
             uint256,
             uint256[] memory
@@ -176,6 +154,7 @@ contract MasterDAOStorage {
 
         return (
             _DAOContract._owner,
+            _DAOContract._GovernanceContract,
             _DAOContract._erc20TokenName,
             _DAOContract._id,
             _DAOContract._proposals
@@ -186,6 +165,7 @@ contract MasterDAOStorage {
         external
         view
         returns (
+            address,
             address,
             string memory,
             uint256,
@@ -208,6 +188,7 @@ contract MasterDAOStorage {
 
         return (
             _DAOContract._owner,
+            _DAOContract._GovernanceContract,
             _DAOContract._erc20TokenName,
             _DAOContract._id,
             _DAOContract._proposals
@@ -218,6 +199,7 @@ contract MasterDAOStorage {
         external
         view
         returns (
+            address,
             address,
             string memory,
             uint256,
@@ -235,9 +217,23 @@ contract MasterDAOStorage {
 
         return (
             _DAOContract._owner,
+            _DAOContract._GovernanceContract,
             _DAOContract._erc20TokenName,
             _DAOContract._id,
             _DAOContract._proposals
         );
+    }
+
+    function getHashedProposalID(uint256 _proposalID)
+        external
+        view
+        returns (uint256, address)
+    {
+        uint256 _hashedProposalID = ProposalIDToProposalHashID[_proposalID][0];
+        uint256 _GOVContractID = ProposalIDToProposalHashID[_proposalID][1];
+
+        address _GOVContractAddress = ERC20TokenDAOContarcts[_GOVContractID]
+        ._GovernanceContract;
+        return (_hashedProposalID, _GOVContractAddress);
     }
 }
