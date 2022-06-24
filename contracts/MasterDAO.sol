@@ -72,34 +72,36 @@ contract MasterDAO {
         return true;
     }
 
-    // function voteForProposal(
-    //     uint256 _proposalID,
-    //     uint8 _support,
-    //     string calldata _reason
-    // ) external returns (bool) {
-    //     // get all governance contracts / counter!
-    //     DAOContracts memory _DAOContract = ERC20TokenDAOContarcts[
-    //         ProposalIDToProposalHashID[_proposalID][1]
-    //     ];
+    function voteForProposal(
+        uint256 _proposalID,
+        uint8 _support,
+        string calldata _reason
+    ) external returns (bool) {
+        uint256 _hashedProposalID;
+        address _GOVContractAddress;
 
-    //     // find proposal hashed id
-    //     uint256 _hashedProposalID = ProposalIDToProposalHashID[_proposalID][0];
-    //     // vote for proposal
-    //     _DAOContract._GovernanceContract.VoteToProposal(
-    //         msg.sender,
-    //         _hashedProposalID,
-    //         _support,
-    //         _reason
-    //     );
+        (_hashedProposalID, _GOVContractAddress) = MasterDAOStorageContract
+        .getHashedProposalID(_proposalID);
 
-    //     return true;
-    // }
+        GovernanceContract _GovernanceContractInstance = GovernanceContract(
+            payable(_GOVContractAddress)
+        );
+
+        _GovernanceContractInstance.VoteToProposal(
+            msg.sender,
+            _hashedProposalID,
+            _support,
+            _reason
+        );
+
+        return true;
+    }
 
     // /// /////////////////////////////////////////////////////////////////////////////// DAO TOKEN FUNCTIONS
 
-    // function addPowerToVote() external returns (bool) {
-    //     return DAOToken(DAOTokenContract).addPower(msg.sender);
-    // }
+    function addPowerToVote() external returns (bool) {
+        return DAOToken(DAOTokenContract).addPower(msg.sender);
+    }
 
     /// /////////////////////////////////////////////////////////////////////////////// GETTER FUNCTIONS
 

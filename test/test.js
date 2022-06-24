@@ -15,6 +15,8 @@ describe("DAO", () => {
   let proposalDesc;
   let proposalID;
 
+  let proposalState;
+
   let owner;
   let addr1;
 
@@ -124,7 +126,7 @@ describe("DAO", () => {
       TX = await MasterDAOContract.createNewDAOContract(
         PersisERC20Contract.address,
         1,
-        1
+        100
       );
       await TX.wait(1);
 
@@ -161,7 +163,7 @@ describe("DAO", () => {
       expect(userVoted).to.eql(false);
 
       // get proposal state
-      const proposalState = await MasterDAOContract.getProposalState(1);
+      proposalState = await MasterDAOContract.getProposalState(1);
       expect(proposalState.toString()).to.eql("0");
 
       // get proposal result
@@ -170,7 +172,32 @@ describe("DAO", () => {
     });
 
     it("it's time to vote for proposal #1", async () => {
-      // user has voted for proposal #1 ?
+      // make delegate from addr1
+      TX = await MasterDAOContract.connect(addr1).addPowerToVote();
+      await TX.wait(1);
+
+      // mine some blocks , vote for proposal #
+      for (let i = 0; i < 10; i++) {
+        ethers.provider.send("evm_mine");
+      }
+
+      TX = await MasterDAOContract.connect(addr1).voteForProposal(
+        1,
+        1,
+        "I want"
+      );
+      await TX.wait(1);
+
+      proposalState = await MasterDAOContract.getProposalState(1);
+      expect(proposalState.toString()).to.eql("1");
+
+      // mone some block to finish proposal
+      for (let i = 0; i < 100; i++) {
+        ethers.provider.send("evm_mine");
+      }
+
+      proposalState = await MasterDAOContract.getProposalState(1);
+      expect(proposalState.toString()).to.eql("4");
     });
   });
 });
